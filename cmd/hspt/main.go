@@ -16,7 +16,10 @@ import (
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/forms"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/graphql"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/initcmd"
+	"github.com/open-cli-collective/hubspot-cli/internal/cmd/lineitems"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/owners"
+	"github.com/open-cli-collective/hubspot-cli/internal/cmd/products"
+	"github.com/open-cli-collective/hubspot-cli/internal/cmd/quotes"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/root"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/tickets"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/workflows"
@@ -44,6 +47,9 @@ func run() error {
 	deals.Register(rootCmd, opts)
 	tickets.Register(rootCmd, opts)
 	owners.Register(rootCmd, opts)
+	products.Register(rootCmd, opts)
+	lineitems.Register(rootCmd, opts)
+	quotes.Register(rootCmd, opts)
 
 	// Marketing commands
 	forms.Register(rootCmd, opts)

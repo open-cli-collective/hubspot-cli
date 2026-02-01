@@ -14,6 +14,7 @@ import (
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/domains"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/files"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/forms"
+	"github.com/open-cli-collective/hubspot-cli/internal/cmd/graphql"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/initcmd"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/owners"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/root"
@@ -57,6 +58,9 @@ func run() error {
 
 	// Automation commands
 	workflows.Register(rootCmd, opts)
+
+	// GraphQL commands
+	graphql.Register(rootCmd, opts)
 
 	return rootCmd.Execute()
 }

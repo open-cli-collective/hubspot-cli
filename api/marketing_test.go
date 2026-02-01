@@ -278,3 +278,276 @@ func TestClient_GetCampaign(t *testing.T) {
 		assert.Nil(t, campaign)
 	})
 }
+
+func TestClient_ListMarketingEmails(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "/marketing/v3/emails", r.URL.Path)
+			assert.Equal(t, http.MethodGet, r.Method)
+			assert.Equal(t, "10", r.URL.Query().Get("limit"))
+
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{
+				"results": [
+					{
+						"id": "email-123",
+						"name": "Welcome Email",
+						"subject": "Welcome to our newsletter",
+						"type": "REGULAR",
+						"state": "DRAFT",
+						"created": "2024-01-15T10:00:00Z",
+						"updated": "2024-01-16T12:00:00Z",
+						"archived": false
+					}
+				],
+				"paging": {
+					"next": {
+						"after": "abc123"
+					}
+				}
+			}`))
+		}))
+		defer server.Close()
+
+		client := &Client{
+			BaseURL:     server.URL,
+			AccessToken: "test-token",
+			HTTPClient:  server.Client(),
+		}
+
+		result, err := client.ListMarketingEmails(ListOptions{Limit: 10})
+		require.NoError(t, err)
+		assert.Len(t, result.Results, 1)
+		assert.Equal(t, "email-123", result.Results[0].ID)
+		assert.Equal(t, "Welcome Email", result.Results[0].Name)
+		assert.Equal(t, "Welcome to our newsletter", result.Results[0].Subject)
+		assert.Equal(t, "abc123", result.Paging.Next.After)
+	})
+
+	t.Run("empty results", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"results": []}`))
+		}))
+		defer server.Close()
+
+		client := &Client{
+			BaseURL:     server.URL,
+			AccessToken: "test-token",
+			HTTPClient:  server.Client(),
+		}
+
+		result, err := client.ListMarketingEmails(ListOptions{})
+		require.NoError(t, err)
+		assert.Empty(t, result.Results)
+	})
+}
+
+func TestClient_GetMarketingEmail(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "/marketing/v3/emails/email-123", r.URL.Path)
+			assert.Equal(t, http.MethodGet, r.Method)
+
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{
+				"id": "email-123",
+				"name": "Welcome Email",
+				"subject": "Welcome to our newsletter",
+				"type": "REGULAR",
+				"state": "PUBLISHED",
+				"fromName": "Company Team",
+				"replyTo": "support@example.com",
+				"created": "2024-01-15T10:00:00Z",
+				"updated": "2024-01-16T12:00:00Z",
+				"archived": false
+			}`))
+		}))
+		defer server.Close()
+
+		client := &Client{
+			BaseURL:     server.URL,
+			AccessToken: "test-token",
+			HTTPClient:  server.Client(),
+		}
+
+		email, err := client.GetMarketingEmail("email-123")
+		require.NoError(t, err)
+		assert.Equal(t, "email-123", email.ID)
+		assert.Equal(t, "Welcome Email", email.Name)
+		assert.Equal(t, "Welcome to our newsletter", email.Subject)
+		assert.Equal(t, "Company Team", email.FromName)
+	})
+
+	t.Run("not found", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte(`{"status": "error", "message": "Email not found"}`))
+		}))
+		defer server.Close()
+
+		client := &Client{
+			BaseURL:     server.URL,
+			AccessToken: "test-token",
+			HTTPClient:  server.Client(),
+		}
+
+		email, err := client.GetMarketingEmail("nonexistent")
+		assert.Error(t, err)
+		assert.True(t, IsNotFound(err))
+		assert.Nil(t, email)
+	})
+
+	t.Run("empty ID", func(t *testing.T) {
+		client := &Client{BaseURL: "https://api.hubapi.com"}
+		email, err := client.GetMarketingEmail("")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "email ID is required")
+		assert.Nil(t, email)
+	})
+}
+
+func TestClient_CreateMarketingEmail(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "/marketing/v3/emails", r.URL.Path)
+			assert.Equal(t, http.MethodPost, r.Method)
+
+			w.WriteHeader(http.StatusCreated)
+			w.Write([]byte(`{
+				"id": "email-456",
+				"name": "New Campaign Email",
+				"subject": "Check out our new products",
+				"type": "REGULAR",
+				"state": "DRAFT",
+				"created": "2024-01-20T10:00:00Z",
+				"updated": "2024-01-20T10:00:00Z"
+			}`))
+		}))
+		defer server.Close()
+
+		client := &Client{
+			BaseURL:     server.URL,
+			AccessToken: "test-token",
+			HTTPClient:  server.Client(),
+		}
+
+		data := map[string]interface{}{
+			"name":    "New Campaign Email",
+			"subject": "Check out our new products",
+		}
+		email, err := client.CreateMarketingEmail(data)
+		require.NoError(t, err)
+		assert.Equal(t, "email-456", email.ID)
+		assert.Equal(t, "New Campaign Email", email.Name)
+	})
+}
+
+func TestClient_UpdateMarketingEmail(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "/marketing/v3/emails/email-123", r.URL.Path)
+			assert.Equal(t, http.MethodPatch, r.Method)
+
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{
+				"id": "email-123",
+				"name": "Updated Email Name",
+				"subject": "Updated Subject",
+				"type": "REGULAR",
+				"state": "DRAFT",
+				"created": "2024-01-15T10:00:00Z",
+				"updated": "2024-01-21T10:00:00Z"
+			}`))
+		}))
+		defer server.Close()
+
+		client := &Client{
+			BaseURL:     server.URL,
+			AccessToken: "test-token",
+			HTTPClient:  server.Client(),
+		}
+
+		updates := map[string]interface{}{
+			"name":    "Updated Email Name",
+			"subject": "Updated Subject",
+		}
+		email, err := client.UpdateMarketingEmail("email-123", updates)
+		require.NoError(t, err)
+		assert.Equal(t, "email-123", email.ID)
+		assert.Equal(t, "Updated Email Name", email.Name)
+	})
+
+	t.Run("not found", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte(`{"status": "error", "message": "Email not found"}`))
+		}))
+		defer server.Close()
+
+		client := &Client{
+			BaseURL:     server.URL,
+			AccessToken: "test-token",
+			HTTPClient:  server.Client(),
+		}
+
+		email, err := client.UpdateMarketingEmail("nonexistent", map[string]interface{}{"name": "test"})
+		assert.Error(t, err)
+		assert.True(t, IsNotFound(err))
+		assert.Nil(t, email)
+	})
+
+	t.Run("empty ID", func(t *testing.T) {
+		client := &Client{BaseURL: "https://api.hubapi.com"}
+		email, err := client.UpdateMarketingEmail("", map[string]interface{}{"name": "test"})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "email ID is required")
+		assert.Nil(t, email)
+	})
+}
+
+func TestClient_DeleteMarketingEmail(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "/marketing/v3/emails/email-123", r.URL.Path)
+			assert.Equal(t, http.MethodDelete, r.Method)
+
+			w.WriteHeader(http.StatusNoContent)
+		}))
+		defer server.Close()
+
+		client := &Client{
+			BaseURL:     server.URL,
+			AccessToken: "test-token",
+			HTTPClient:  server.Client(),
+		}
+
+		err := client.DeleteMarketingEmail("email-123")
+		require.NoError(t, err)
+	})
+
+	t.Run("not found", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte(`{"status": "error", "message": "Email not found"}`))
+		}))
+		defer server.Close()
+
+		client := &Client{
+			BaseURL:     server.URL,
+			AccessToken: "test-token",
+			HTTPClient:  server.Client(),
+		}
+
+		err := client.DeleteMarketingEmail("nonexistent")
+		assert.Error(t, err)
+		assert.True(t, IsNotFound(err))
+	})
+
+	t.Run("empty ID", func(t *testing.T) {
+		client := &Client{BaseURL: "https://api.hubapi.com"}
+		err := client.DeleteMarketingEmail("")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "email ID is required")
+	})
+}

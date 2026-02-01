@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/associations"
+	"github.com/open-cli-collective/hubspot-cli/internal/cmd/blogs"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/calls"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/campaigns"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/companies"
@@ -24,6 +25,7 @@ import (
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/meetings"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/notes"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/owners"
+	"github.com/open-cli-collective/hubspot-cli/internal/cmd/pages"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/pipelines"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/products"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/properties"
@@ -80,6 +82,8 @@ func run() error {
 	// CMS commands
 	files.Register(rootCmd, opts)
 	domains.Register(rootCmd, opts)
+	pages.Register(rootCmd, opts)
+	blogs.Register(rootCmd, opts)
 
 	// Conversations commands
 	conversations.Register(rootCmd, opts)

@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/open-cli-collective/hubspot-cli/api"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/root"
 	"github.com/open-cli-collective/hubspot-cli/internal/config"
 )
@@ -86,8 +87,32 @@ func runInit(opts *root.Options, token string, noVerify bool) error {
 	// Verify connection unless --no-verify
 	if !noVerify {
 		v.Println("Testing connection...")
-		// TODO: Add API verification once api package is implemented
-		v.Warning("Connection verification not yet implemented")
+		client, err := api.New(api.ClientConfig{
+			AccessToken: token,
+			Verbose:     opts.Verbose,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create client: %w", err)
+		}
+
+		owners, err := client.GetOwners()
+		if err != nil {
+			if api.IsUnauthorized(err) {
+				v.Error("Authentication failed: invalid access token")
+				v.Println("")
+				v.Info("Check your token at: HubSpot Settings > Integrations > Private Apps")
+				return nil
+			}
+			if api.IsForbidden(err) {
+				v.Error("Authentication failed: missing required scopes")
+				v.Println("")
+				v.Info("Ensure your private app has the required scopes enabled")
+				return nil
+			}
+			return fmt.Errorf("connection test failed: %w", err)
+		}
+
+		v.Success("Connection verified (%d owners found)", len(owners))
 		v.Println("")
 	}
 

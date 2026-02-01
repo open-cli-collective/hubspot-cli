@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/open-cli-collective/hubspot-cli/api"
 	"github.com/open-cli-collective/hubspot-cli/internal/config"
 	"github.com/open-cli-collective/hubspot-cli/internal/version"
 	"github.com/open-cli-collective/hubspot-cli/internal/view"
@@ -32,6 +33,14 @@ func (o *Options) View() *view.View {
 // GetAccessToken returns the access token from config or environment
 func (o *Options) GetAccessToken() string {
 	return config.GetAccessToken()
+}
+
+// APIClient creates a new HubSpot API client from the current configuration
+func (o *Options) APIClient() (*api.Client, error) {
+	return api.New(api.ClientConfig{
+		AccessToken: config.GetAccessToken(),
+		Verbose:     o.Verbose,
+	})
 }
 
 // NewCmd creates the root command and returns the options struct

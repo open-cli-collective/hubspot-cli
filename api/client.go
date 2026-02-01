@@ -111,6 +111,11 @@ func (c *Client) patch(urlStr string, body interface{}) ([]byte, error) {
 	return c.doRequest(http.MethodPatch, urlStr, body)
 }
 
+// put performs a PUT request
+func (c *Client) put(urlStr string, body interface{}) ([]byte, error) {
+	return c.doRequest(http.MethodPut, urlStr, body)
+}
+
 // delete performs a DELETE request
 func (c *Client) delete(urlStr string) ([]byte, error) {
 	return c.doRequest(http.MethodDelete, urlStr, nil)

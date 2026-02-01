@@ -18,6 +18,7 @@ import (
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/owners"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/root"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/tickets"
+	"github.com/open-cli-collective/hubspot-cli/internal/cmd/workflows"
 	"github.com/open-cli-collective/hubspot-cli/internal/exitcode"
 )
 
@@ -53,6 +54,9 @@ func run() error {
 
 	// Conversations commands
 	conversations.Register(rootCmd, opts)
+
+	// Automation commands
+	workflows.Register(rootCmd, opts)
 
 	return rootCmd.Execute()
 }

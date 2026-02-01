@@ -32,6 +32,7 @@ import (
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/properties"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/quotes"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/root"
+	"github.com/open-cli-collective/hubspot-cli/internal/cmd/schemas"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/tasks"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/tickets"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/workflows"
@@ -74,6 +75,7 @@ func run() error {
 	associations.Register(rootCmd, opts)
 	properties.Register(rootCmd, opts)
 	pipelines.Register(rootCmd, opts)
+	schemas.Register(rootCmd, opts)
 
 	// Marketing commands
 	forms.Register(rootCmd, opts)

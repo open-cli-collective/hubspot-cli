@@ -1,0 +1,109 @@
+version: 2
+
+project_name: hubspot-cli
+
+before:
+  hooks:
+    - go mod tidy
+    - go test ./...
+
+builds:
+  - id: hspt
+    main: ./cmd/hspt
+    binary: hspt
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/open-cli-collective/hubspot-cli/internal/version.Version={{.Version}}
+      - -X github.com/open-cli-collective/hubspot-cli/internal/version.Commit={{.Commit}}
+      - -X github.com/open-cli-collective/hubspot-cli/internal/version.BuildDate={{.Date}}
+
+archives:
+  - id: default
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    name_template: "hspt_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+
+# Linux packages (.deb and .rpm)
+nfpms:
+  - id: hspt
+    package_name: hspt
+    vendor: Open CLI Collective
+    homepage: https://github.com/open-cli-collective/hubspot-cli
+    maintainer: Open CLI Collective <https://github.com/open-cli-collective>
+    description: Command-line interface for HubSpot
+    license: MIT
+    formats:
+      - deb
+      - rpm
+    bindir: /usr/bin
+    contents:
+      - src: LICENSE
+        dst: /usr/share/licenses/hspt/LICENSE
+
+checksum:
+  name_template: 'checksums.txt'
+
+# Homebrew cask with auto-quarantine removal for unsigned binaries
+homebrew_casks:
+  - name: hubspot-cli
+    repository:
+      owner: open-cli-collective
+      name: homebrew-tap
+      token: "{{ .Env.TAP_GITHUB_TOKEN }}"
+    homepage: https://github.com/open-cli-collective/hubspot-cli
+    description: "Command-line interface for HubSpot"
+    hooks:
+      post:
+        install: |
+          system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/hspt"]
+    caveats: |
+      hubspot-cli has been installed.
+
+      To configure, run:
+        hspt init
+
+      Get your API token from your HubSpot account settings.
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^ci:'
+      - '^chore:'
+      - '^Merge pull request'
+  groups:
+    - title: 'Features'
+      regexp: '^feat:'
+      order: 0
+    - title: 'Bug Fixes'
+      regexp: '^fix:'
+      order: 1
+    - title: 'Other'
+      order: 999
+
+release:
+  github:
+    owner: open-cli-collective
+    name: hubspot-cli

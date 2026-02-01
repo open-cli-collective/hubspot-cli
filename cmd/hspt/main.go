@@ -9,6 +9,7 @@ import (
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/completion"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/configcmd"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/contacts"
+	"github.com/open-cli-collective/hubspot-cli/internal/cmd/conversations"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/deals"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/domains"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/files"
@@ -49,6 +50,9 @@ func run() error {
 	// CMS commands
 	files.Register(rootCmd, opts)
 	domains.Register(rootCmd, opts)
+
+	// Conversations commands
+	conversations.Register(rootCmd, opts)
 
 	return rootCmd.Execute()
 }

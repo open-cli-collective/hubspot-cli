@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/open-cli-collective/hubspot-cli/api"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/root"
 	"github.com/open-cli-collective/hubspot-cli/internal/config"
 )
@@ -160,10 +161,36 @@ pass/fail status and troubleshooting suggestions on failure.`,
 			v.Println("Testing connection to HubSpot...")
 			v.Println("")
 
-			// TODO: Add API verification once api package is implemented
-			v.Warning("Connection verification not yet implemented")
+			client, err := opts.APIClient()
+			if err != nil {
+				v.Error("Failed to create client: %s", err)
+				return nil
+			}
+
+			owners, err := client.GetOwners()
+			if err != nil {
+				if api.IsUnauthorized(err) {
+					v.Error("Authentication failed: invalid access token")
+					v.Println("")
+					v.Info("Check your token at: HubSpot Settings > Integrations > Private Apps")
+					return nil
+				}
+				if api.IsForbidden(err) {
+					v.Error("Authentication failed: missing required scopes")
+					v.Println("")
+					v.Info("Ensure your private app has the required scopes enabled")
+					return nil
+				}
+				v.Error("Connection failed: %s", err)
+				return nil
+			}
+
+			v.Success("Connection successful!")
 			v.Println("")
-			v.Info("Token is configured (masked): %s...%s", token[:4], token[len(token)-4:])
+			v.Info("HubSpot account has %d owners", len(owners))
+			if len(owners) > 0 {
+				v.Info("First owner: %s (%s)", owners[0].FullName(), owners[0].Email)
+			}
 
 			return nil
 		},

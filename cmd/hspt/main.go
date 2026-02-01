@@ -19,6 +19,7 @@ import (
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/files"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/forms"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/graphql"
+	"github.com/open-cli-collective/hubspot-cli/internal/cmd/hubdb"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/initcmd"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/lineitems"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/marketingemails"
@@ -84,6 +85,7 @@ func run() error {
 	domains.Register(rootCmd, opts)
 	pages.Register(rootCmd, opts)
 	blogs.Register(rootCmd, opts)
+	hubdb.Register(rootCmd, opts)
 
 	// Conversations commands
 	conversations.Register(rootCmd, opts)

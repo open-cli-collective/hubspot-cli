@@ -198,3 +198,127 @@ func (c *Client) GetCampaign(campaignID string) (*Campaign, error) {
 
 	return &result, nil
 }
+
+// MarketingEmail represents a HubSpot marketing email
+type MarketingEmail struct {
+	ID          string                 `json:"id"`
+	Name        string                 `json:"name"`
+	Subject     string                 `json:"subject,omitempty"`
+	Type        string                 `json:"type,omitempty"`
+	State       string                 `json:"state,omitempty"`
+	PublishDate string                 `json:"publishDate,omitempty"`
+	CreatedAt   string                 `json:"created,omitempty"`
+	UpdatedAt   string                 `json:"updated,omitempty"`
+	Archived    bool                   `json:"archived,omitempty"`
+	CampaignID  string                 `json:"campaign,omitempty"`
+	FromName    string                 `json:"fromName,omitempty"`
+	ReplyTo     string                 `json:"replyTo,omitempty"`
+	Content     map[string]interface{} `json:"content,omitempty"`
+}
+
+// MarketingEmailList represents a paginated list of marketing emails
+type MarketingEmailList struct {
+	Results []MarketingEmail `json:"results"`
+	Paging  *Paging          `json:"paging,omitempty"`
+	Total   int              `json:"total,omitempty"`
+}
+
+// ListMarketingEmails retrieves marketing emails with pagination
+func (c *Client) ListMarketingEmails(opts ListOptions) (*MarketingEmailList, error) {
+	url := fmt.Sprintf("%s/marketing/v3/emails", c.BaseURL)
+
+	params := make(map[string]string)
+	if opts.Limit > 0 {
+		params["limit"] = strconv.Itoa(opts.Limit)
+	}
+	if opts.After != "" {
+		params["after"] = opts.After
+	}
+
+	if len(params) > 0 {
+		url = buildURL(url, params)
+	}
+
+	body, err := c.get(url)
+	if err != nil {
+		return nil, err
+	}
+
+	var result MarketingEmailList
+	if err := json.Unmarshal(body, &result); err != nil {
+		return nil, fmt.Errorf("failed to parse marketing emails response: %w", err)
+	}
+
+	return &result, nil
+}
+
+// GetMarketingEmail retrieves a single marketing email by ID
+func (c *Client) GetMarketingEmail(emailID string) (*MarketingEmail, error) {
+	if emailID == "" {
+		return nil, fmt.Errorf("email ID is required")
+	}
+
+	url := fmt.Sprintf("%s/marketing/v3/emails/%s", c.BaseURL, emailID)
+
+	body, err := c.get(url)
+	if err != nil {
+		return nil, err
+	}
+
+	var result MarketingEmail
+	if err := json.Unmarshal(body, &result); err != nil {
+		return nil, fmt.Errorf("failed to parse marketing email response: %w", err)
+	}
+
+	return &result, nil
+}
+
+// CreateMarketingEmail creates a new marketing email
+func (c *Client) CreateMarketingEmail(email map[string]interface{}) (*MarketingEmail, error) {
+	url := fmt.Sprintf("%s/marketing/v3/emails", c.BaseURL)
+
+	body, err := c.post(url, email)
+	if err != nil {
+		return nil, err
+	}
+
+	var result MarketingEmail
+	if err := json.Unmarshal(body, &result); err != nil {
+		return nil, fmt.Errorf("failed to parse marketing email response: %w", err)
+	}
+
+	return &result, nil
+}
+
+// UpdateMarketingEmail updates an existing marketing email
+func (c *Client) UpdateMarketingEmail(emailID string, updates map[string]interface{}) (*MarketingEmail, error) {
+	if emailID == "" {
+		return nil, fmt.Errorf("email ID is required")
+	}
+
+	url := fmt.Sprintf("%s/marketing/v3/emails/%s", c.BaseURL, emailID)
+
+	body, err := c.patch(url, updates)
+	if err != nil {
+		return nil, err
+	}
+
+	var result MarketingEmail
+	if err := json.Unmarshal(body, &result); err != nil {
+		return nil, fmt.Errorf("failed to parse marketing email response: %w", err)
+	}
+
+	return &result, nil
+}
+
+// DeleteMarketingEmail archives a marketing email
+func (c *Client) DeleteMarketingEmail(emailID string) error {
+	if emailID == "" {
+		return fmt.Errorf("email ID is required")
+	}
+
+	url := fmt.Sprintf("%s/marketing/v3/emails/%s", c.BaseURL, emailID)
+
+	_, err := c.delete(url)
+	return err
+}

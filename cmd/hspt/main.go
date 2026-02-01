@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/open-cli-collective/hubspot-cli/internal/cmd/associations"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/calls"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/campaigns"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/companies"
@@ -22,7 +23,9 @@ import (
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/meetings"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/notes"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/owners"
+	"github.com/open-cli-collective/hubspot-cli/internal/cmd/pipelines"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/products"
+	"github.com/open-cli-collective/hubspot-cli/internal/cmd/properties"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/quotes"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/root"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/tasks"
@@ -62,6 +65,11 @@ func run() error {
 	emails.Register(rootCmd, opts)
 	meetings.Register(rootCmd, opts)
 	tasks.Register(rootCmd, opts)
+
+	// CRM infrastructure commands
+	associations.Register(rootCmd, opts)
+	properties.Register(rootCmd, opts)
+	pipelines.Register(rootCmd, opts)
 
 	// Marketing commands
 	forms.Register(rootCmd, opts)

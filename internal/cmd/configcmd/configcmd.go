@@ -1,7 +1,9 @@
 package configcmd
 
 import (
+	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -18,50 +20,11 @@ func Register(parent *cobra.Command, opts *root.Options) {
 		Long:  "Commands for managing hspt configuration and credentials.",
 	}
 
-	cmd.AddCommand(newSetCmd(opts))
 	cmd.AddCommand(newShowCmd(opts))
 	cmd.AddCommand(newClearCmd(opts))
 	cmd.AddCommand(newTestCmd(opts))
 
 	parent.AddCommand(cmd)
-}
-
-func newSetCmd(opts *root.Options) *cobra.Command {
-	var token string
-
-	cmd := &cobra.Command{
-		Use:   "set",
-		Short: "Set configuration values",
-		Long:  "Set HubSpot credentials.",
-		Example: `  # Set access token
-  hspt config set --token YOUR_ACCESS_TOKEN
-
-  # Using environment variable instead
-  export HUBSPOT_ACCESS_TOKEN=YOUR_ACCESS_TOKEN`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			v := opts.View()
-
-			cfg, err := config.Load()
-			if err != nil {
-				return err
-			}
-
-			if token != "" {
-				cfg.AccessToken = token
-			}
-
-			if err := config.Save(cfg); err != nil {
-				return err
-			}
-
-			v.Success("Configuration saved to %s", config.Path())
-			return nil
-		},
-	}
-
-	cmd.Flags().StringVar(&token, "token", "", "HubSpot access token")
-
-	return cmd
 }
 
 func newShowCmd(opts *root.Options) *cobra.Command {
@@ -75,14 +38,7 @@ func newShowCmd(opts *root.Options) *cobra.Command {
 			token := config.GetAccessToken()
 
 			// Mask the token
-			maskedToken := ""
-			if token != "" {
-				if len(token) > 8 {
-					maskedToken = token[:4] + "..." + token[len(token)-4:]
-				} else {
-					maskedToken = "****"
-				}
-			}
+			maskedToken := maskToken(token)
 
 			headers := []string{"KEY", "VALUE", "SOURCE"}
 			rows := [][]string{
@@ -104,13 +60,41 @@ func newShowCmd(opts *root.Options) *cobra.Command {
 	}
 }
 
+func maskToken(token string) string {
+	if token == "" {
+		return ""
+	}
+	if len(token) <= 8 {
+		return "********"
+	}
+	return token[:4] + "********" + token[len(token)-4:]
+}
+
 func newClearCmd(opts *root.Options) *cobra.Command {
-	return &cobra.Command{
+	var force bool
+
+	cmd := &cobra.Command{
 		Use:   "clear",
 		Short: "Clear stored configuration",
 		Long:  "Remove the stored configuration file. Environment variables will still work.",
+		Example: `  # Clear with confirmation prompt
+  hspt config clear
+
+  # Clear without confirmation
+  hspt config clear --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			v := opts.View()
+
+			if !force {
+				fmt.Print("This will remove all stored credentials. Continue? [y/N]: ")
+				var response string
+				_, _ = fmt.Scanln(&response)
+				response = strings.TrimSpace(strings.ToLower(response))
+				if response != "y" && response != "yes" {
+					v.Info("Clear cancelled")
+					return nil
+				}
+			}
 
 			if err := config.Clear(); err != nil {
 				return err
@@ -120,6 +104,10 @@ func newClearCmd(opts *root.Options) *cobra.Command {
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVarP(&force, "force", "f", false, "Skip confirmation prompt")
+
+	return cmd
 }
 
 func getTokenSource() string {

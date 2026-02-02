@@ -1,10 +1,10 @@
 package initcmd
 
 import (
-	"bufio"
 	"fmt"
-	"strings"
+	"os"
 
+	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 
 	"github.com/open-cli-collective/hubspot-cli/api"
@@ -45,124 +45,103 @@ Get your access token from: HubSpot Settings > Integrations > Private Apps`,
 	parent.AddCommand(cmd)
 }
 
-func runInit(opts *root.Options, token string, noVerify bool) error {
-	v := opts.View()
-	reader := bufio.NewReader(opts.Stdin)
+func runInit(opts *root.Options, prefillToken string, noVerify bool) error {
+	configPath := config.Path()
 
-	v.Println("HubSpot CLI Setup")
-	v.Println("")
-
-	// Check for existing config
+	// Load existing config for pre-population
 	existingCfg, _ := config.Load()
-	if existingCfg.AccessToken != "" {
-		v.Warning("Existing configuration found at %s", config.Path())
-		v.Println("")
+	if existingCfg == nil {
+		existingCfg = &config.Config{}
+	}
 
-		overwrite, err := promptYesNo(reader, "Overwrite existing configuration?", false)
+	// Check if config already exists
+	if _, err := os.Stat(configPath); err == nil {
+		var overwrite bool
+		err := huh.NewConfirm().
+			Title("Configuration already exists").
+			Description(fmt.Sprintf("Overwrite %s?", configPath)).
+			Value(&overwrite).
+			Run()
 		if err != nil {
 			return err
 		}
 		if !overwrite {
-			v.Info("Setup cancelled")
+			fmt.Println("Initialization cancelled.")
 			return nil
 		}
-		v.Println("")
 	}
 
-	// Prompt for token if not provided
-	if token == "" {
-		v.Println("Enter your HubSpot access token")
-		v.Println("  Get one from: HubSpot Settings > Integrations > Private Apps")
-		v.Println("")
+	cfg := &config.Config{}
 
-		var err error
-		token, err = promptRequired(reader, "Access Token")
-		if err != nil {
-			return err
-		}
+	// Pre-fill from existing config, then override with CLI flags
+	// Priority: CLI flag > existing config value
+	if prefillToken != "" {
+		cfg.AccessToken = prefillToken
+	} else if existingCfg.AccessToken != "" {
+		cfg.AccessToken = existingCfg.AccessToken
 	}
 
-	v.Println("")
+	// Build the form
+	form := huh.NewForm(
+		huh.NewGroup(
+			huh.NewInput().
+				Title("Access Token").
+				Description("Get one from: HubSpot Settings > Integrations > Private Apps").
+				EchoMode(huh.EchoModePassword).
+				Value(&cfg.AccessToken).
+				Validate(func(s string) error {
+					if s == "" {
+						return fmt.Errorf("access token is required")
+					}
+					return nil
+				}),
+		),
+	)
+
+	if err := form.Run(); err != nil {
+		return err
+	}
 
 	// Verify connection unless --no-verify
 	if !noVerify {
-		v.Println("Testing connection...")
+		fmt.Print("Verifying connection... ")
 		client, err := api.New(api.ClientConfig{
-			AccessToken: token,
+			AccessToken: cfg.AccessToken,
 			Verbose:     opts.Verbose,
 		})
 		if err != nil {
+			fmt.Println("failed!")
 			return fmt.Errorf("failed to create client: %w", err)
 		}
 
 		owners, err := client.GetOwners()
 		if err != nil {
-			if api.IsUnauthorized(err) {
-				v.Error("Authentication failed: invalid access token")
-				v.Println("")
-				v.Info("Check your token at: HubSpot Settings > Integrations > Private Apps")
-				return nil
-			}
-			if api.IsForbidden(err) {
-				v.Error("Authentication failed: missing required scopes")
-				v.Println("")
-				v.Info("Ensure your private app has the required scopes enabled")
-				return nil
-			}
-			return fmt.Errorf("connection test failed: %w", err)
+			fmt.Println("failed!")
+			fmt.Println()
+			fmt.Println("Troubleshooting:")
+			fmt.Println("  - Check your access token is correct")
+			fmt.Println("  - Ensure your private app has the required scopes")
+			fmt.Println()
+			fmt.Println("To get a new access token:")
+			fmt.Println("  HubSpot Settings > Integrations > Private Apps")
+			return fmt.Errorf("connection verification failed: %w", err)
 		}
-
-		v.Success("Connection verified (%d owners found)", len(owners))
-		v.Println("")
+		fmt.Println("success!")
+		fmt.Println()
+		fmt.Printf("HubSpot account has %d owners\n", len(owners))
+		if len(owners) > 0 {
+			fmt.Printf("First owner: %s (%s)\n", owners[0].FullName(), owners[0].Email)
+		}
 	}
 
 	// Save configuration
-	cfg := &config.Config{
-		AccessToken: token,
-	}
-
 	if err := config.Save(cfg); err != nil {
 		return fmt.Errorf("failed to save configuration: %w", err)
 	}
 
-	v.Success("Configuration saved to %s", config.Path())
-	v.Println("")
-	v.Println("Try it out:")
-	v.Println("  hspt config show")
+	fmt.Printf("\nConfiguration saved to %s\n", configPath)
+	fmt.Println("\nYou're all set! Try running:")
+	fmt.Println("  hspt config show")
 
 	return nil
-}
-
-func promptRequired(reader *bufio.Reader, label string) (string, error) {
-	for {
-		fmt.Printf("%s: ", label)
-		input, err := reader.ReadString('\n')
-		if err != nil {
-			return "", err
-		}
-		input = strings.TrimSpace(input)
-		if input != "" {
-			return input, nil
-		}
-		fmt.Printf("  %s is required\n", label)
-	}
-}
-
-func promptYesNo(reader *bufio.Reader, question string, defaultYes bool) (bool, error) {
-	suffix := " [y/N]: "
-	if defaultYes {
-		suffix = " [Y/n]: "
-	}
-
-	fmt.Print(question + suffix)
-	input, err := reader.ReadString('\n')
-	if err != nil {
-		return false, err
-	}
-	input = strings.TrimSpace(strings.ToLower(input))
-
-	if input == "" {
-		return defaultYes, nil
-	}
-	return input == "y" || input == "yes", nil
 }

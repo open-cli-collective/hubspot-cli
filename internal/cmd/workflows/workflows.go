@@ -9,6 +9,7 @@ import (
 
 	"github.com/open-cli-collective/hubspot-cli/api"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/root"
+	"github.com/open-cli-collective/hubspot-cli/internal/cmd/shared"
 )
 
 // Register registers the workflows command and subcommands
@@ -71,7 +72,7 @@ func newListCmd(opts *root.Options) *cobra.Command {
 					workflow.ID,
 					workflow.Name,
 					workflow.Type,
-					formatBool(workflow.Enabled),
+					shared.FormatBool(workflow.Enabled),
 					formatObjectType(workflow.ObjectTypeID),
 				})
 			}
@@ -125,7 +126,7 @@ func newGetCmd(opts *root.Options) *cobra.Command {
 				{"ID", workflow.ID},
 				{"Name", workflow.Name},
 				{"Type", workflow.Type},
-				{"Enabled", formatBool(workflow.Enabled)},
+				{"Enabled", shared.FormatBool(workflow.Enabled)},
 				{"Object Type", formatObjectType(workflow.ObjectTypeID)},
 				{"Revision ID", workflow.RevisionID},
 				{"Created", workflow.CreatedAt},
@@ -135,13 +136,6 @@ func newGetCmd(opts *root.Options) *cobra.Command {
 			return v.Render(headers, rows, workflow)
 		},
 	}
-}
-
-func formatBool(b bool) string {
-	if b {
-		return "Yes"
-	}
-	return "No"
 }
 
 func formatObjectType(objectTypeID string) string {
@@ -264,16 +258,26 @@ func newUpdateCmd(opts *root.Options) *cobra.Command {
 }
 
 func newDeleteCmd(opts *root.Options) *cobra.Command {
-	return &cobra.Command{
+	var force bool
+
+	cmd := &cobra.Command{
 		Use:   "delete <id>",
 		Short: "Delete a workflow",
 		Long:  "Delete an automation workflow by ID.",
 		Example: `  # Delete a workflow
-  hspt workflows delete 12345`,
+  hspt workflows delete 12345
+
+  # Delete without confirmation
+  hspt workflows delete 12345 --force`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			v := opts.View()
 			id := args[0]
+
+			if !force {
+				v.Warning("This will delete workflow %s. Use --force to confirm.", id)
+				return nil
+			}
 
 			client, err := opts.APIClient()
 			if err != nil {
@@ -293,6 +297,10 @@ func newDeleteCmd(opts *root.Options) *cobra.Command {
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVar(&force, "force", false, "Confirm deletion without prompt")
+
+	return cmd
 }
 
 func newEnrollCmd(opts *root.Options) *cobra.Command {

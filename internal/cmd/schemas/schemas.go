@@ -10,6 +10,7 @@ import (
 
 	"github.com/open-cli-collective/hubspot-cli/api"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/root"
+	"github.com/open-cli-collective/hubspot-cli/internal/cmd/shared"
 )
 
 // Register registers the schemas command and subcommands
@@ -129,7 +130,7 @@ func newGetCmd(opts *root.Options) *cobra.Command {
 				{"Singular Label", schema.Labels.Singular},
 				{"Plural Label", schema.Labels.Plural},
 				{"Primary Display Property", schema.PrimaryDisplayProperty},
-				{"Archived", formatBool(schema.Archived)},
+				{"Archived", shared.FormatBool(schema.Archived)},
 				{"Created", schema.CreatedAt},
 				{"Updated", schema.UpdatedAt},
 			}
@@ -198,16 +199,26 @@ func newCreateCmd(opts *root.Options) *cobra.Command {
 }
 
 func newDeleteCmd(opts *root.Options) *cobra.Command {
-	return &cobra.Command{
+	var force bool
+
+	cmd := &cobra.Command{
 		Use:   "delete <fullyQualifiedName>",
 		Short: "Delete a custom object schema",
 		Long:  "Delete a custom object schema by its fully qualified name. This will also delete all objects of that type.",
 		Example: `  # Delete schema by fully qualified name
-  hspt schemas delete p_my_custom_object`,
+  hspt schemas delete p_my_custom_object
+
+  # Delete without confirmation
+  hspt schemas delete p_my_custom_object --force`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			v := opts.View()
 			fqn := args[0]
+
+			if !force {
+				v.Warning("This will delete schema %s and all objects of that type. Use --force to confirm.", fqn)
+				return nil
+			}
 
 			client, err := opts.APIClient()
 			if err != nil {
@@ -227,11 +238,8 @@ func newDeleteCmd(opts *root.Options) *cobra.Command {
 			return nil
 		},
 	}
-}
 
-func formatBool(b bool) string {
-	if b {
-		return "Yes"
-	}
-	return "No"
+	cmd.Flags().BoolVar(&force, "force", false, "Confirm deletion without prompt")
+
+	return cmd
 }

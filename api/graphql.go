@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 // GraphQLRequest represents a GraphQL query request
@@ -46,17 +47,11 @@ func (r *GraphQLResponse) ErrorMessages() string {
 	if !r.HasErrors() {
 		return ""
 	}
-	if len(r.Errors) == 1 {
-		return r.Errors[0].Message
-	}
-	msg := ""
+	messages := make([]string, len(r.Errors))
 	for i, e := range r.Errors {
-		if i > 0 {
-			msg += "; "
-		}
-		msg += e.Message
+		messages[i] = e.Message
 	}
-	return msg
+	return strings.Join(messages, "; ")
 }
 
 // ExecuteGraphQL executes a GraphQL query
@@ -290,7 +285,7 @@ func (s *IntrospectionSchema) GetRootTypes() []IntrospectionType {
 	var result []IntrospectionType
 	for _, t := range s.Types {
 		// Skip internal types (start with __)
-		if len(t.Name) > 0 && t.Name[0:1] != "_" {
+		if !strings.HasPrefix(t.Name, "__") {
 			// Include OBJECT and INTERFACE types that have fields
 			if (t.Kind == "OBJECT" || t.Kind == "INTERFACE") && len(t.Fields) > 0 {
 				result = append(result, t)

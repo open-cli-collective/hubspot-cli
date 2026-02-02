@@ -11,6 +11,13 @@ import (
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/root"
 )
 
+// tableRenderer is the interface for rendering tabular output
+type tableRenderer interface {
+	Render([]string, [][]string, interface{}) error
+	Info(string, ...interface{})
+	Error(string, ...interface{})
+}
+
 // Register registers the graphql command and subcommands
 func Register(parent *cobra.Command, opts *root.Options) {
 	cmd := &cobra.Command{
@@ -185,10 +192,7 @@ specific type, and --field to show details of a specific field.`,
 	return cmd
 }
 
-func listRootTypes(v interface {
-	Render([]string, [][]string, interface{}) error
-	Info(string, ...interface{})
-}, schema *api.IntrospectionSchema) error {
+func listRootTypes(v tableRenderer, schema *api.IntrospectionSchema) error {
 	types := schema.GetRootTypes()
 	if len(types) == 0 {
 		v.Info("No types found in schema")
@@ -214,10 +218,7 @@ func listRootTypes(v interface {
 	return v.Render(headers, rows, types)
 }
 
-func showTypeFields(v interface {
-	Render([]string, [][]string, interface{}) error
-	Info(string, ...interface{})
-}, t *api.IntrospectionType) error {
+func showTypeFields(v tableRenderer, t *api.IntrospectionType) error {
 	if len(t.Fields) == 0 {
 		v.Info("Type %s has no fields", t.Name)
 		return nil
@@ -246,11 +247,7 @@ func showTypeFields(v interface {
 	return v.Render(headers, rows, t.Fields)
 }
 
-func showFieldDetails(v interface {
-	Render([]string, [][]string, interface{}) error
-	Info(string, ...interface{})
-	Error(string, ...interface{})
-}, t *api.IntrospectionType, fieldName string) error {
+func showFieldDetails(v tableRenderer, t *api.IntrospectionType, fieldName string) error {
 	var field *api.IntrospectionField
 	for i := range t.Fields {
 		if t.Fields[i].Name == fieldName {

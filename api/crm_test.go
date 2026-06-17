@@ -457,8 +457,17 @@ func TestClient_SearchObjects(t *testing.T) {
 		assert.Len(t, result.Results, 1)
 		assert.Equal(t, float64(50), body["limit"])
 		assert.Equal(t, "cursor123", body["after"])
-		assert.Contains(t, body, "filterGroups")
-		assert.Contains(t, body, "sorts")
+
+		groups := body["filterGroups"].([]interface{})
+		f := groups[0].(map[string]interface{})["filters"].([]interface{})[0].(map[string]interface{})
+		assert.Equal(t, "hs_task_status", f["propertyName"])
+		assert.Equal(t, "EQ", f["operator"])
+		assert.Equal(t, "NOT_STARTED", f["value"])
+
+		sorts := body["sorts"].([]interface{})
+		s := sorts[0].(map[string]interface{})
+		assert.Equal(t, "hs_timestamp", s["propertyName"])
+		assert.Equal(t, "ASCENDING", s["direction"])
 	})
 
 	t.Run("search emails serializes BETWEEN highValue and IN values", func(t *testing.T) {

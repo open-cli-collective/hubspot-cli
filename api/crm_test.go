@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -427,6 +428,76 @@ func TestClient_SearchObjects(t *testing.T) {
 		})
 
 		require.NoError(t, err)
+	})
+
+	t.Run("search tasks sends filter, sort, and pagination", func(t *testing.T) {
+		var body map[string]interface{}
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "/crm/v3/objects/tasks/search", r.URL.Path)
+			assert.Equal(t, http.MethodPost, r.Method)
+			assert.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"results": [{"id": "1", "properties": {"hs_task_status": "NOT_STARTED"}}]}`))
+		}))
+		defer server.Close()
+
+		client := &Client{BaseURL: server.URL, AccessToken: "test-token", HTTPClient: server.Client()}
+
+		result, err := client.SearchObjects(ObjectTypeTasks, SearchRequest{
+			FilterGroups: []SearchFilterGroup{
+				{Filters: []SearchFilter{{PropertyName: "hs_task_status", Operator: "EQ", Value: "NOT_STARTED"}}},
+			},
+			Sorts:      []SearchSort{{PropertyName: "hs_timestamp", Direction: "ASCENDING"}},
+			Properties: []string{"hs_task_subject"},
+			Limit:      50,
+			After:      "cursor123",
+		})
+
+		require.NoError(t, err)
+		assert.Len(t, result.Results, 1)
+		assert.Equal(t, float64(50), body["limit"])
+		assert.Equal(t, "cursor123", body["after"])
+
+		groups := body["filterGroups"].([]interface{})
+		f := groups[0].(map[string]interface{})["filters"].([]interface{})[0].(map[string]interface{})
+		assert.Equal(t, "hs_task_status", f["propertyName"])
+		assert.Equal(t, "EQ", f["operator"])
+		assert.Equal(t, "NOT_STARTED", f["value"])
+
+		sorts := body["sorts"].([]interface{})
+		s := sorts[0].(map[string]interface{})
+		assert.Equal(t, "hs_timestamp", s["propertyName"])
+		assert.Equal(t, "ASCENDING", s["direction"])
+	})
+
+	t.Run("search emails serializes BETWEEN highValue and IN values", func(t *testing.T) {
+		var body map[string]interface{}
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "/crm/v3/objects/emails/search", r.URL.Path)
+			assert.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"results": []}`))
+		}))
+		defer server.Close()
+
+		client := &Client{BaseURL: server.URL, AccessToken: "test-token", HTTPClient: server.Client()}
+
+		_, err := client.SearchObjects(ObjectTypeEmails, SearchRequest{
+			FilterGroups: []SearchFilterGroup{
+				{Filters: []SearchFilter{
+					{PropertyName: "hs_timestamp", Operator: "BETWEEN", Value: "1000", HighValue: "2000"},
+					{PropertyName: "hs_email_direction", Operator: "IN", Values: []string{"EMAIL", "INCOMING_EMAIL"}},
+				}},
+			},
+		})
+
+		require.NoError(t, err)
+		groups := body["filterGroups"].([]interface{})
+		filters := groups[0].(map[string]interface{})["filters"].([]interface{})
+		between := filters[0].(map[string]interface{})
+		assert.Equal(t, "2000", between["highValue"])
+		in := filters[1].(map[string]interface{})
+		assert.Equal(t, []interface{}{"EMAIL", "INCOMING_EMAIL"}, in["values"])
 	})
 }
 

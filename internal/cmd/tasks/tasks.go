@@ -8,6 +8,7 @@ import (
 
 	"github.com/open-cli-collective/hubspot-cli/api"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/root"
+	"github.com/open-cli-collective/hubspot-cli/internal/cmd/shared"
 )
 
 // DefaultProperties are the default properties to fetch for tasks
@@ -26,6 +27,7 @@ func Register(parent *cobra.Command, opts *root.Options) {
 	cmd.AddCommand(newCreateCmd(opts))
 	cmd.AddCommand(newUpdateCmd(opts))
 	cmd.AddCommand(newDeleteCmd(opts))
+	cmd.AddCommand(newSearchCmd(opts))
 
 	parent.AddCommand(cmd)
 }
@@ -359,6 +361,34 @@ func newDeleteCmd(opts *root.Options) *cobra.Command {
 	cmd.Flags().BoolVar(&force, "force", false, "Confirm deletion without prompt")
 
 	return cmd
+}
+
+func newSearchCmd(opts *root.Options) *cobra.Command {
+	return shared.NewSearchCmd(opts, shared.SearchCmdConfig{
+		ObjectType: api.ObjectTypeTasks,
+		Noun:       "task",
+		Short:      "Search tasks",
+		Long:       "Search tasks using the HubSpot CRM Search API with filtering and sorting.",
+		Example: `  # Open tasks for a specific owner, oldest first
+  hspt tasks search --filter "hs_task_status=NOT_STARTED" --filter "hubspot_owner_id=77999105" --sort "hs_timestamp:asc"
+
+  # Overdue tasks (not started, due on or before a date)
+  hspt tasks search --filter "hs_task_status=NOT_STARTED" --filter "hs_timestamp<=2026-03-17" --sort "hs_timestamp:asc"
+
+  # Tasks whose subject contains a phrase
+  hspt tasks search --filter "hs_task_subject:CONTAINS_TOKEN:renewal" --limit 25`,
+		DefaultProperties: DefaultProperties,
+		Headers:           []string{"ID", "SUBJECT", "STATUS", "PRIORITY", "TIMESTAMP"},
+		Row: func(obj api.CRMObject) []string {
+			return []string{
+				obj.ID,
+				truncate(obj.GetProperty("hs_task_subject"), 40),
+				obj.GetProperty("hs_task_status"),
+				obj.GetProperty("hs_task_priority"),
+				obj.GetProperty("hs_timestamp"),
+			}
+		},
+	})
 }
 
 func truncate(s string, maxLen int) string {

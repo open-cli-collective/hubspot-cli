@@ -8,6 +8,7 @@ import (
 
 	"github.com/open-cli-collective/hubspot-cli/api"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/root"
+	"github.com/open-cli-collective/hubspot-cli/internal/cmd/shared"
 )
 
 // DefaultProperties are the default properties to fetch for emails
@@ -26,6 +27,7 @@ func Register(parent *cobra.Command, opts *root.Options) {
 	cmd.AddCommand(newCreateCmd(opts))
 	cmd.AddCommand(newUpdateCmd(opts))
 	cmd.AddCommand(newDeleteCmd(opts))
+	cmd.AddCommand(newSearchCmd(opts))
 
 	parent.AddCommand(cmd)
 }
@@ -355,6 +357,34 @@ func newDeleteCmd(opts *root.Options) *cobra.Command {
 	cmd.Flags().BoolVar(&force, "force", false, "Confirm deletion without prompt")
 
 	return cmd
+}
+
+func newSearchCmd(opts *root.Options) *cobra.Command {
+	return shared.NewSearchCmd(opts, shared.SearchCmdConfig{
+		ObjectType: api.ObjectTypeEmails,
+		Noun:       "email",
+		Short:      "Search email engagements",
+		Long:       "Search email engagements using the HubSpot CRM Search API with filtering and sorting.",
+		Example: `  # Outbound emails, newest first
+  hspt emails search --filter "hs_email_direction=EMAIL" --sort "hs_timestamp:desc" --limit 20
+
+  # Emails whose subject contains a phrase
+  hspt emails search --filter "hs_email_subject:CONTAINS_TOKEN:Dev Academy" --limit 10
+
+  # Emails for a specific owner within a date range
+  hspt emails search --filter "hubspot_owner_id=77999105" --filter "hs_timestamp:BETWEEN:2026-01-01:2026-03-01"`,
+		DefaultProperties: DefaultProperties,
+		Headers:           []string{"ID", "SUBJECT", "DIRECTION", "STATUS", "TIMESTAMP"},
+		Row: func(obj api.CRMObject) []string {
+			return []string{
+				obj.ID,
+				truncate(obj.GetProperty("hs_email_subject"), 40),
+				obj.GetProperty("hs_email_direction"),
+				obj.GetProperty("hs_email_status"),
+				obj.GetProperty("hs_timestamp"),
+			}
+		},
+	})
 }
 
 func truncate(s string, maxLen int) string {

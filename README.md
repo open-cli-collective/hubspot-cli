@@ -196,7 +196,7 @@ hspt tasks search --filter "hs_task_status=NOT_STARTED" --filter "hubspot_owner_
 # Overdue tasks (not started, due on or before a date — ISO dates are converted automatically)
 hspt tasks search --filter "hs_task_status=NOT_STARTED" --filter "hs_timestamp<=2026-03-17" --sort "hs_timestamp:asc"
 
-# Outbound emails, newest first
+# Logged emails by direction, newest first
 hspt emails search --filter "hs_email_direction=EMAIL" --sort "hs_timestamp:desc" --limit 20
 
 # Emails whose subject contains a phrase

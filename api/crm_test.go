@@ -435,7 +435,7 @@ func TestClient_SearchObjects(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			assert.Equal(t, "/crm/v3/objects/tasks/search", r.URL.Path)
 			assert.Equal(t, http.MethodPost, r.Method)
-			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+			assert.NoError(t, json.NewDecoder(r.Body).Decode(&body))
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(`{"results": [{"id": "1", "properties": {"hs_task_status": "NOT_STARTED"}}]}`))
 		}))
@@ -474,7 +474,7 @@ func TestClient_SearchObjects(t *testing.T) {
 		var body map[string]interface{}
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			assert.Equal(t, "/crm/v3/objects/emails/search", r.URL.Path)
-			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+			assert.NoError(t, json.NewDecoder(r.Body).Decode(&body))
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(`{"results": []}`))
 		}))

@@ -95,10 +95,15 @@ func (v *View) Render(headers []string, rows [][]string, jsonData interface{}) e
 	}
 }
 
-// Success prints a success message
+// Success prints a success message.
+//
+// Status messages are written to stderr (v.Err) so that stdout carries only
+// the structured data payload (e.g. JSON). This keeps `--output json` output
+// valid and parseable by tools like jq, and is consistent with Error and
+// Warning, which already write to stderr.
 func (v *View) Success(format string, args ...interface{}) {
 	msg := fmt.Sprintf(format, args...)
-	fmt.Fprintln(v.Out, color.GreenString("✓ %s", msg))
+	fmt.Fprintln(v.Err, color.GreenString("✓ %s", msg))
 }
 
 // Error prints an error message
@@ -113,18 +118,25 @@ func (v *View) Warning(format string, args ...interface{}) {
 	fmt.Fprintln(v.Err, color.YellowString("⚠ %s", msg))
 }
 
-// Info prints an info message
+// Info prints an info message to stderr.
+//
+// Like Success, informational/status messages go to stderr so they do not
+// corrupt the machine-readable payload written to stdout.
 func (v *View) Info(format string, args ...interface{}) {
 	msg := fmt.Sprintf(format, args...)
-	fmt.Fprintln(v.Out, msg)
+	fmt.Fprintln(v.Err, msg)
 }
 
-// Print prints a message without formatting
+// Print prints a message without formatting to stderr.
+//
+// Status/progress text goes to stderr so stdout carries only structured data.
 func (v *View) Print(format string, args ...interface{}) {
-	fmt.Fprintf(v.Out, format, args...)
+	fmt.Fprintf(v.Err, format, args...)
 }
 
-// Println prints a message with newline
+// Println prints a message with newline to stderr.
+//
+// Status/progress text goes to stderr so stdout carries only structured data.
 func (v *View) Println(format string, args ...interface{}) {
-	fmt.Fprintln(v.Out, fmt.Sprintf(format, args...))
+	fmt.Fprintln(v.Err, fmt.Sprintf(format, args...))
 }

@@ -31,8 +31,8 @@ func TestStatusMessagesGoToStderr(t *testing.T) {
 	}{
 		{"Success", func(v *View) { v.Success("created with ID %s", "98765") }, "created with ID 98765"},
 		{"Info", func(v *View) { v.Info("Found %d contact(s)", 3) }, "Found 3 contact(s)"},
-		{"Print", func(v *View) { v.Print("progress %d%%", 50) }, "progress 50%"},
-		{"Println", func(v *View) { v.Println("More results available") }, "More results available"},
+		{"PrintStatus", func(v *View) { v.PrintStatus("progress %d%%", 50) }, "progress 50%"},
+		{"PrintlnStatus", func(v *View) { v.PrintlnStatus("More results available") }, "More results available"},
 	}
 
 	for _, tt := range tests {
@@ -47,7 +47,8 @@ func TestStatusMessagesGoToStderr(t *testing.T) {
 }
 
 // TestErrorAndWarningGoToStderr documents that Error and Warning remain on
-// stderr (they always have); this is now consistent with Success/Info/Print.
+// stderr (they always have); this is now consistent with the status methods
+// Success/Info/PrintStatus/PrintlnStatus.
 func TestErrorAndWarningGoToStderr(t *testing.T) {
 	v, out, errBuf := newTestView("json")
 
@@ -81,6 +82,39 @@ func TestStdoutIsValidJSON(t *testing.T) {
 	require.NoError(t, json.Unmarshal([]byte(stdout), &parsed),
 		"stdout must be valid JSON, got: %q", stdout)
 	assert.Equal(t, "98765", parsed["id"])
+}
+
+// TestPrimaryOutputGoesToStdout guarantees the other half of the invariant:
+// the primary rendered result (Table/Plain/Render/JSON) always lands on stdout,
+// never stderr, even while status chatter is routed to stderr. If a "status"
+// method ever leaked primary output to stderr, this would catch it.
+func TestPrimaryOutputGoesToStdout(t *testing.T) {
+	t.Run("table renders to stdout in human mode", func(t *testing.T) {
+		v, out, errBuf := newTestView("table")
+		// Interleave status messages with the primary rendered result.
+		v.Info("Found 1 result")
+		require.NoError(t, v.Render([]string{"ID", "NAME"}, [][]string{{"98765", "Demo"}}, nil))
+		v.PrintlnStatus("More results available")
+
+		stdout := out.String()
+		assert.Contains(t, stdout, "98765", "primary rendered data must be on stdout")
+		assert.Contains(t, stdout, "Demo", "primary rendered data must be on stdout")
+		// Status chatter must not leak into the primary stdout stream.
+		assert.NotContains(t, stdout, "Found 1 result")
+		assert.NotContains(t, stdout, "More results available")
+		assert.Contains(t, errBuf.String(), "Found 1 result")
+		assert.Contains(t, errBuf.String(), "More results available")
+	})
+
+	t.Run("plain renders to stdout in plain mode", func(t *testing.T) {
+		v, out, errBuf := newTestView("plain")
+		v.Info("Found 1 result")
+		require.NoError(t, v.Render(nil, [][]string{{"98765", "Demo"}}, nil))
+
+		assert.Contains(t, out.String(), "98765", "primary rendered data must be on stdout")
+		assert.NotContains(t, out.String(), "Found 1 result")
+		assert.Contains(t, errBuf.String(), "Found 1 result")
+	})
 }
 
 // TestJSONOutputUnaffectedByColorFlag is a small sanity check that JSON output

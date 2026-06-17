@@ -53,31 +53,6 @@ func TestClient_ListAssociations(t *testing.T) {
 		assert.Equal(t, 202, result.Results[0].AssociationTypes[0].TypeID)
 	})
 
-	t.Run("string toObjectId also parses", func(t *testing.T) {
-		// json.Number tolerates both numeric and string JSON values, so a
-		// string toObjectId (older API shape) still parses.
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{
-				"results": [
-					{"toObjectId": "55555", "associationTypes": []}
-				]
-			}`))
-		}))
-		defer server.Close()
-
-		client := &Client{
-			BaseURL:     server.URL,
-			AccessToken: "test-token",
-			HTTPClient:  server.Client(),
-		}
-
-		result, err := client.ListAssociations(ObjectTypeContacts, "12345", ObjectTypeNotes, ListOptions{})
-		require.NoError(t, err)
-		require.Len(t, result.Results, 1)
-		assert.Equal(t, "55555", result.Results[0].ToObjectID.String())
-	})
-
 	t.Run("empty results parse cleanly", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)

@@ -141,7 +141,7 @@ func newGetCmd(opts *root.Options) *cobra.Command {
 
 			// Show fields in verbose mode
 			if opts.Verbose && len(form.FieldGroups) > 0 {
-				v.Println("")
+				v.PrintlnStatus("")
 				v.Info("Form Fields:")
 				fieldHeaders := []string{"NAME", "LABEL", "TYPE", "REQUIRED"}
 				fieldRows := make([][]string, 0)

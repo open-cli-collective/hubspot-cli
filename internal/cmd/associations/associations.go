@@ -78,7 +78,7 @@ func newListCmd(opts *root.Options) *cobra.Command {
 						label = fmt.Sprintf("Type %d", at.TypeID)
 					}
 					rows = append(rows, []string{
-						assoc.ToObjectID,
+						assoc.ToObjectID.String(),
 						label,
 						at.Category,
 					})

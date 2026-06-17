@@ -5,9 +5,15 @@ import (
 	"fmt"
 )
 
-// Association represents a HubSpot association between objects
+// Association represents a HubSpot association between objects.
+//
+// ToObjectID uses json.Number because the HubSpot CRM v4 associations API
+// returns toObjectId as a JSON number (e.g. 98765), not a string. A plain
+// string field would fail to unmarshal with "cannot unmarshal number into Go
+// struct field". The number is kept as-is and ToObjectID.String() yields it
+// for display without forcing a string-vs-int type choice up front.
 type Association struct {
-	ToObjectID       string            `json:"toObjectId"`
+	ToObjectID       json.Number       `json:"toObjectId"`
 	AssociationTypes []AssociationType `json:"associationTypes"`
 }
 

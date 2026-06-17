@@ -8,6 +8,7 @@ import (
 
 	"github.com/open-cli-collective/hubspot-cli/api"
 	"github.com/open-cli-collective/hubspot-cli/internal/cmd/root"
+	"github.com/open-cli-collective/hubspot-cli/internal/cmd/shared"
 )
 
 // DefaultProperties are the default properties to fetch for emails
@@ -26,6 +27,7 @@ func Register(parent *cobra.Command, opts *root.Options) {
 	cmd.AddCommand(newCreateCmd(opts))
 	cmd.AddCommand(newUpdateCmd(opts))
 	cmd.AddCommand(newDeleteCmd(opts))
+	cmd.AddCommand(newSearchCmd(opts))
 
 	parent.AddCommand(cmd)
 }
@@ -353,6 +355,103 @@ func newDeleteCmd(opts *root.Options) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&force, "force", false, "Confirm deletion without prompt")
+
+	return cmd
+}
+
+func newSearchCmd(opts *root.Options) *cobra.Command {
+	var filterArgs []string
+	var sortArgs []string
+	var limit int
+	var after string
+	var properties []string
+
+	cmd := &cobra.Command{
+		Use:   "search",
+		Short: "Search email engagements",
+		Long:  "Search email engagements using the HubSpot CRM Search API with filtering and sorting.",
+		Example: `  # Outbound emails, newest first
+  hspt emails search --filter "hs_email_direction=EMAIL" --sort "hs_timestamp:desc" --limit 20
+
+  # Emails whose subject contains a phrase
+  hspt emails search --filter "hs_email_subject:CONTAINS_TOKEN:Dev Academy" --limit 10
+
+  # Emails for a specific owner within a date range
+  hspt emails search --filter "hubspot_owner_id=77999105" --filter "hs_timestamp:BETWEEN:2026-01-01:2026-03-01"`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			v := opts.View()
+
+			client, err := opts.APIClient()
+			if err != nil {
+				return err
+			}
+
+			if len(properties) == 0 {
+				properties = DefaultProperties
+			}
+
+			filters, err := shared.ParseFilters(filterArgs)
+			if err != nil {
+				return err
+			}
+
+			sorts, err := shared.ParseSort(sortArgs)
+			if err != nil {
+				return err
+			}
+
+			req := api.SearchRequest{
+				Properties: properties,
+				Limit:      limit,
+				After:      after,
+				Sorts:      sorts,
+			}
+			if len(filters) > 0 {
+				req.FilterGroups = []api.SearchFilterGroup{
+					{Filters: filters},
+				}
+			}
+
+			result, err := client.SearchObjects(api.ObjectTypeEmails, req)
+			if err != nil {
+				return err
+			}
+
+			if len(result.Results) == 0 {
+				v.Info("No emails found matching criteria")
+				return nil
+			}
+
+			headers := []string{"ID", "SUBJECT", "DIRECTION", "STATUS", "TIMESTAMP"}
+			rows := make([][]string, 0, len(result.Results))
+			for _, obj := range result.Results {
+				rows = append(rows, []string{
+					obj.ID,
+					truncate(obj.GetProperty("hs_email_subject"), 40),
+					obj.GetProperty("hs_email_direction"),
+					obj.GetProperty("hs_email_status"),
+					obj.GetProperty("hs_timestamp"),
+				})
+			}
+
+			v.Info("Found %d email(s)", len(result.Results))
+			if err := v.Render(headers, rows, result); err != nil {
+				return err
+			}
+
+			if result.Paging != nil && result.Paging.Next != nil {
+				v.Info("\nMore results available. Use --after %s to get the next page.", result.Paging.Next.After)
+			}
+
+			return nil
+		},
+	}
+
+	cmd.Flags().StringArrayVar(&filterArgs, "filter", nil, "Filter condition (e.g. prop=value, prop>=value, prop:OPERATOR:value); repeatable")
+	cmd.Flags().StringArrayVar(&sortArgs, "sort", nil, "Sort condition (e.g. hs_timestamp:asc or hs_timestamp:desc); repeatable")
+	cmd.Flags().IntVar(&limit, "limit", 10, "Maximum number of results")
+	cmd.Flags().StringVar(&after, "after", "", "Pagination cursor for the next page")
+	cmd.Flags().StringSliceVar(&properties, "properties", nil, "Properties to include (comma-separated)")
 
 	return cmd
 }

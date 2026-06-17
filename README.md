@@ -186,6 +186,27 @@ hspt tasks create --subject "Follow up" --body "Call about renewal" --priority H
 hspt calls create --body "Discussed pricing" --direction OUTBOUND --duration 300
 ```
 
+The `tasks` and `emails` commands also support a `search` subcommand backed by the
+HubSpot CRM Search API, with repeatable `--filter` and `--sort` flags:
+
+```bash
+# Open tasks for a specific owner, oldest first
+hspt tasks search --filter "hs_task_status=NOT_STARTED" --filter "hubspot_owner_id=77999105" --sort "hs_timestamp:asc"
+
+# Overdue tasks (not started, due on or before a date — ISO dates are converted automatically)
+hspt tasks search --filter "hs_task_status=NOT_STARTED" --filter "hs_timestamp<=2026-03-17" --sort "hs_timestamp:asc"
+
+# Outbound emails, newest first
+hspt emails search --filter "hs_email_direction=EMAIL" --sort "hs_timestamp:desc" --limit 20
+
+# Emails whose subject contains a phrase
+hspt emails search --filter "hs_email_subject:CONTAINS_TOKEN:Dev Academy" --limit 10
+```
+
+Filters accept shorthand (`prop=value`, `prop!=value`, `prop>=value`, `prop<=value`,
+`prop>value`, `prop<value`) and explicit operators (`prop:OPERATOR:value`,
+`prop:BETWEEN:low:high`, `prop:IN:a,b,c`). Sorts accept `prop:asc` or `prop:desc`.
+
 ### Associations
 
 ```bash

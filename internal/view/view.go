@@ -24,7 +24,7 @@ const (
 //
 // Status, progress, and banner text are written to Err (stderr) so that Out
 // (stdout) carries only the primary rendered result. This keeps `--output json`
-// output valid and parseable by tools like jq (issue #52): in JSON mode stdout
+// output valid and parseable by tools like jq: in JSON mode stdout
 // is only the JSON payload, and in human/plain mode only the rendered result
 // lands on stdout while status chatter goes to stderr.
 type View struct {

@@ -140,14 +140,14 @@ pass/fail status and troubleshooting suggestions on failure.`,
 			token := config.GetAccessToken()
 			if token == "" {
 				v.Error("No HubSpot access token configured")
-				v.Println("")
+				v.PrintlnStatus("")
 				v.Info("Configure with: hspt init")
 				v.Info("Or set environment variable: HUBSPOT_ACCESS_TOKEN")
 				return nil
 			}
 
-			v.Println("Testing connection to HubSpot...")
-			v.Println("")
+			v.PrintlnStatus("Testing connection to HubSpot...")
+			v.PrintlnStatus("")
 
 			client, err := opts.APIClient()
 			if err != nil {
@@ -159,13 +159,13 @@ pass/fail status and troubleshooting suggestions on failure.`,
 			if err != nil {
 				if api.IsUnauthorized(err) {
 					v.Error("Authentication failed: invalid access token")
-					v.Println("")
+					v.PrintlnStatus("")
 					v.Info("Check your token at: HubSpot Settings > Integrations > Private Apps")
 					return nil
 				}
 				if api.IsForbidden(err) {
 					v.Error("Authentication failed: missing required scopes")
-					v.Println("")
+					v.PrintlnStatus("")
 					v.Info("Ensure your private app has the required scopes enabled")
 					return nil
 				}
@@ -174,7 +174,7 @@ pass/fail status and troubleshooting suggestions on failure.`,
 			}
 
 			v.Success("Connection successful!")
-			v.Println("")
+			v.PrintlnStatus("")
 			v.Info("HubSpot account has %d owners", len(owners))
 			if len(owners) > 0 {
 				v.Info("First owner: %s (%s)", owners[0].FullName(), owners[0].Email)

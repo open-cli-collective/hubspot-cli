@@ -72,9 +72,11 @@ type ListOptions struct {
 
 // SearchFilter represents a single filter condition
 type SearchFilter struct {
-	PropertyName string `json:"propertyName"`
-	Operator     string `json:"operator"`
-	Value        string `json:"value,omitempty"`
+	PropertyName string   `json:"propertyName"`
+	Operator     string   `json:"operator"`
+	Value        string   `json:"value,omitempty"`
+	HighValue    string   `json:"highValue,omitempty"` // used by the BETWEEN operator
+	Values       []string `json:"values,omitempty"`    // used by the IN / NOT_IN operators
 }
 
 // SearchFilterGroup represents a group of filters (ANDed together)

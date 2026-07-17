@@ -19,7 +19,7 @@ A command-line interface for HubSpot CRM. Manage contacts, companies, deals, and
 **Homebrew (recommended)**
 
 ```bash
-brew install open-cli-collective/tap/hspt
+brew install open-cli-collective/tap/hubspot-cli
 ```
 
 ---

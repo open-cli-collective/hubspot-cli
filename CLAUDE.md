@@ -134,14 +134,16 @@ docs(readme): add examples
 
 Releases are automated with a dual-gate system to avoid unnecessary releases:
 
-**Gate 1 - Path filter:** Only triggers when Go code changes (`**.go`, `go.mod`, `go.sum`)
-**Gate 2 - Commit prefix:** Only `feat:` and `fix:` commits create releases
+**Gate 1 - Path filter:** Triggers when Go code (`**.go`, `go.mod`, `go.sum`) **or** release-affecting config (`.goreleaser.yml`, `version.txt`, the `auto-release`/`release` workflow files) changes. Packaging config affects the shipped artifact, so a fix there must be releasable on its own (see #62).
+**Gate 2 - Commit prefix:** Only `feat:` and `fix:` commits create releases.
+
+**Manual lever:** the `Auto Release` workflow also accepts a `workflow_dispatch` (scoped to `main`) to cut a release on demand for a change the path filter can't catch. The commit-prefix gate does not apply to a manual dispatch.
 
 This means:
-- `feat: add command` + Go files changed → release
-- `fix: handle edge case` + Go files changed → release
-- `docs:`, `ci:`, `test:`, `refactor:` → no release
-- Changes only to docs, packaging, workflows → no release
+- `feat: add command` / `fix: handle edge case` + a watched path changed → release
+- A packaging/release-config fix (e.g. a Homebrew cask fix in `.goreleaser.yml`) → release, so it reaches the tap
+- `docs:`, `ci:`, `test:`, `refactor:`, or changes only to docs / non-release CI → no release
+- Actions → Auto Release → Run workflow (on `main`) → release
 
 **After merging a release-triggering PR:** The workflow creates a tag, which triggers GoReleaser to build binaries and publish to Homebrew. Chocolatey and Winget are published automatically.
 

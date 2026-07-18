@@ -24,9 +24,11 @@ jobs:
   create-release:
     runs-on: ubuntu-latest
     # Release on feat:/fix: commits (semantic versioning), or on a manual
-    # dispatch (which carries no head_commit to inspect).
+    # dispatch. The dispatch arm is scoped to main so the manual lever can
+    # never tag/release arbitrary non-main content (the push arm is already
+    # branch-scoped, and the checkout below is unpinned).
     if: >-
-      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
       startsWith(github.event.head_commit.message, 'feat:') ||
       startsWith(github.event.head_commit.message, 'feat(') ||
       startsWith(github.event.head_commit.message, 'fix:') ||

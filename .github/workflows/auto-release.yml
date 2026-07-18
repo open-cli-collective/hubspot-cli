@@ -7,6 +7,15 @@ on:
       - '**.go'
       - 'go.mod'
       - 'go.sum'
+      # Packaging/release config also affects the shipped artifact, so a fix
+      # to these must be releasable on its own (e.g. a Homebrew cask fix that
+      # touches no Go files). See #62.
+      - '.goreleaser.yml'
+      - 'version.txt'
+      - '.github/workflows/auto-release.yml'
+      - '.github/workflows/release.yml'
+  # Manual lever to cut a release for a change the path filter doesn't catch.
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -14,8 +23,10 @@ permissions:
 jobs:
   create-release:
     runs-on: ubuntu-latest
-    # Only release on feat: or fix: commits (semantic versioning)
+    # Release on feat:/fix: commits (semantic versioning), or on a manual
+    # dispatch (which carries no head_commit to inspect).
     if: >-
+      github.event_name == 'workflow_dispatch' ||
       startsWith(github.event.head_commit.message, 'feat:') ||
       startsWith(github.event.head_commit.message, 'feat(') ||
       startsWith(github.event.head_commit.message, 'fix:') ||

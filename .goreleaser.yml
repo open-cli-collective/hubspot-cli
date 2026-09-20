@@ -62,17 +62,17 @@ checksum:
 # Homebrew cask with auto-quarantine removal for unsigned binaries
 homebrew_casks:
   - name: hubspot-cli
+    skip_upload: true
     repository:
       owner: open-cli-collective
       name: homebrew-tap
-      token: "{{ .Env.TAP_GITHUB_TOKEN }}"
     homepage: https://github.com/open-cli-collective/hubspot-cli
     description: "Command-line interface for HubSpot"
-    binary: hspt
+    binaries: [hspt]
     hooks:
       post:
         install: |
-          system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/hspt"]
+          run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "hspt"], base: :staged_path
     caveats: |
       hubspot-cli has been installed.
 

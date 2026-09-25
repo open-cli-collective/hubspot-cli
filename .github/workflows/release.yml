@@ -81,10 +81,24 @@ jobs:
           # Inject checksums into install script
           $script = 'packaging/chocolatey/tools/chocolateyInstall.ps1'
           $content = Get-Content $script -Raw
+          foreach ($placeholder in @('URL_AMD64_PLACEHOLDER', 'URL_ARM64_PLACEHOLDER', 'CHECKSUM_AMD64_PLACEHOLDER', 'CHECKSUM_ARM64_PLACEHOLDER')) {
+            if (-not $content.Contains($placeholder)) {
+              Write-Error "$script has no $placeholder"
+              exit 1
+            }
+          }
+          $urlAmd64 = "https://github.com/open-cli-collective/hubspot-cli/releases/download/${{ github.ref_name }}/hspt_${version}_windows_amd64.zip"
+          $urlArm64 = "https://github.com/open-cli-collective/hubspot-cli/releases/download/${{ github.ref_name }}/hspt_${version}_windows_arm64.zip"
+          $content = $content.Replace('URL_AMD64_PLACEHOLDER', $urlAmd64)
+          $content = $content.Replace('URL_ARM64_PLACEHOLDER', $urlArm64)
           $content = $content -replace 'CHECKSUM_AMD64_PLACEHOLDER', $env:X64_HASH
           $content = $content -replace 'CHECKSUM_ARM64_PLACEHOLDER', $env:ARM64_HASH
+          if ($content -match 'URL_(?:AMD64|ARM64)_PLACEHOLDER|CHECKSUM_(?:AMD64|ARM64)_PLACEHOLDER|ChocolateyPackageVersion|\$\{\s*version\s*\}') {
+            Write-Error "$script still contains an unrendered URL/checksum placeholder or runtime package-version expression"
+            exit 1
+          }
           Set-Content $script $content
-          Write-Host "Injected checksums into install script"
+          Write-Host "Injected download URLs and checksums into install script"
 
       - name: Pack Chocolatey package
         shell: pwsh

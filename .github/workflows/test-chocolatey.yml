@@ -1,0 +1,106 @@
+name: Test Chocolatey Package
+
+on:
+  pull_request:
+    paths:
+      - 'packaging/chocolatey/**'
+      - '.github/workflows/release.yml'
+      - '.github/workflows/test-chocolatey.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'packaging/chocolatey/**'
+      - '.github/workflows/release.yml'
+      - '.github/workflows/test-chocolatey.yml'
+
+jobs:
+  test-chocolatey:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Build package binary
+        shell: pwsh
+        run: go build -o packaging/chocolatey/tools/hspt.exe ./cmd/hspt
+
+      - name: Render and inspect Chocolatey package
+        shell: pwsh
+        run: |
+          $testVersion = '0.0.1'
+          $amd64Hash = ('a' * 64) -join ''
+          $arm64Hash = ('b' * 64) -join ''
+          $repository = 'open-cli-collective/hubspot-cli'
+          $amd64Url = "https://github.com/$repository/releases/download/v$testVersion/hspt_${testVersion}_windows_amd64.zip"
+          $arm64Url = "https://github.com/$repository/releases/download/v$testVersion/hspt_${testVersion}_windows_arm64.zip"
+          $checkDirectory = Join-Path $env:RUNNER_TEMP 'hubspot-cli-chocolatey-render'
+          Remove-Item $checkDirectory -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Path $checkDirectory -Force | Out-Null
+          Copy-Item 'packaging/chocolatey/*' $checkDirectory -Recurse -Force
+
+          & packaging/chocolatey/render.ps1 `
+            -PackageDirectory $checkDirectory `
+            -Repository $repository `
+            -Version $testVersion `
+            -Amd64Checksum $amd64Hash `
+            -Arm64Checksum $arm64Hash
+
+          Push-Location $checkDirectory
+          try {
+            choco pack
+            if ($LASTEXITCODE -ne 0) { throw 'choco pack failed' }
+          } finally {
+            Pop-Location
+          }
+
+          $packages = @(Get-ChildItem $checkDirectory -Filter '*.nupkg')
+          if ($packages.Count -ne 1) { throw "Expected one nupkg, found $($packages.Count)" }
+          $archive = Join-Path $env:RUNNER_TEMP 'hubspot-cli-chocolatey-render.nupkg.zip'
+          $extractDirectory = Join-Path $env:RUNNER_TEMP 'hubspot-cli-chocolatey-extract'
+          Remove-Item $archive, $extractDirectory -Recurse -Force -ErrorAction SilentlyContinue
+          Copy-Item $packages[0].FullName $archive
+          Expand-Archive $archive $extractDirectory -Force
+          $installScript = Get-Content (Join-Path $extractDirectory 'tools/chocolateyInstall.ps1') -Raw
+          foreach ($value in @($amd64Url, $arm64Url, $amd64Hash, $arm64Hash)) {
+            if (-not $installScript.Contains($value)) { throw "Package is missing rendered value $value" }
+          }
+          if ($installScript -match 'URL_(?:AMD64|ARM64)_PLACEHOLDER|CHECKSUM_(?:AMD64|ARM64)_PLACEHOLDER|ChocolateyPackageVersion|\$\{\s*version\s*\}') {
+            throw 'Packed install script still contains an unrendered placeholder or runtime package-version expression'
+          }
+
+          $installPath = Join-Path $extractDirectory 'tools/chocolateyInstall.ps1'
+          function Test-InstallArchitecture {
+            param(
+              [string]$Architecture,
+              [string]$ExpectedUrl,
+              [string]$ExpectedChecksum
+            )
+            $env:PROCESSOR_ARCHITECTURE = $Architecture
+            $global:stubUrl = $null
+            $global:stubChecksum = $null
+            function global:Install-ChocolateyZipPackage {
+              param(
+                [string]$PackageName,
+                [string]$Url,
+                [string]$UnzipLocation,
+                [string]$Checksum,
+                [string]$ChecksumType
+              )
+              $global:stubUrl = $Url
+              $global:stubChecksum = $Checksum
+              if ($ChecksumType -ne 'sha256') { throw "Unexpected checksum type $ChecksumType" }
+            }
+            try {
+              . $installPath
+            } finally {
+              Remove-Item Function:\Install-ChocolateyZipPackage -ErrorAction SilentlyContinue
+            }
+            if ($global:stubUrl -ne $ExpectedUrl) { throw "${Architecture} selected $global:stubUrl" }
+            if ($global:stubChecksum -ne $ExpectedChecksum) { throw "${Architecture} selected the wrong checksum" }
+          }
+
+          Test-InstallArchitecture 'AMD64' $amd64Url $amd64Hash
+          Test-InstallArchitecture 'ARM64' $arm64Url $arm64Hash

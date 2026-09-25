@@ -27,9 +27,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check Chocolatey template rendering
-        run: packaging/chocolatey/test-render.sh
-
       - uses: actions/setup-go@v5
         with:
           go-version: '1.22'

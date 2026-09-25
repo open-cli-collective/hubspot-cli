@@ -104,3 +104,26 @@ jobs:
 
           Test-InstallArchitecture 'AMD64' $amd64Url $amd64Hash
           Test-InstallArchitecture 'ARM64' $arm64Url $arm64Hash
+
+          $prereleaseVersion = '0.0.1-rc.1'
+          $prereleaseDirectory = Join-Path $env:RUNNER_TEMP 'hubspot-cli-chocolatey-prerelease'
+          Remove-Item $prereleaseDirectory -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Path $prereleaseDirectory -Force | Out-Null
+          Copy-Item 'packaging/chocolatey/*' $prereleaseDirectory -Recurse -Force
+          & packaging/chocolatey/render.ps1 `
+            -PackageDirectory $prereleaseDirectory `
+            -Repository $repository `
+            -Version $prereleaseVersion `
+            -Amd64Checksum $amd64Hash `
+            -Arm64Checksum $arm64Hash
+          Push-Location $prereleaseDirectory
+          try {
+            choco pack
+            if ($LASTEXITCODE -ne 0) { throw 'prerelease choco pack failed' }
+          } finally {
+            Pop-Location
+          }
+          $prereleasePackages = @(Get-ChildItem $prereleaseDirectory -Filter '*.nupkg')
+          if ($prereleasePackages.Count -ne 1) {
+            throw 'Expected one prerelease nupkg'
+          }

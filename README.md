@@ -54,6 +54,10 @@ Download `.deb`, `.rpm`, or `.tar.gz` from the [Releases page](https://github.co
 go install github.com/open-cli-collective/hubspot-cli/cmd/hspt@latest
 ```
 
+### Arch Linux / Omarchy
+
+Add the signed [Open CLI Collective pacman repository](https://github.com/open-cli-collective/linux-packages#arch-linux-pacman) once. Native Arch packages are published with new releases and updated by `sudo pacman -Syu`. Install with `sudo pacman -Syu hspt`; executable names remain unchanged.
+
 ## Setup
 
 ### 1. Create a HubSpot Private App

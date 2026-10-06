@@ -68,23 +68,14 @@ jobs:
           echo "X64_HASH=$x64Hash" >> $env:GITHUB_ENV
           echo "ARM64_HASH=$arm64Hash" >> $env:GITHUB_ENV
 
-      - name: Update version and checksums
+      - name: Render package
         shell: pwsh
         run: |
           $version = "${{ github.ref_name }}".TrimStart('v')
-
-          # Update version in nuspec
-          $nuspec = 'packaging/chocolatey/hubspot-cli.nuspec'
-          (Get-Content $nuspec) -replace '<version>0.0.0</version>', "<version>$version</version>" | Set-Content $nuspec
-          Write-Host "Updated nuspec to version $version"
-
-          # Inject checksums into install script
-          $script = 'packaging/chocolatey/tools/chocolateyInstall.ps1'
-          $content = Get-Content $script -Raw
-          $content = $content -replace 'CHECKSUM_AMD64_PLACEHOLDER', $env:X64_HASH
-          $content = $content -replace 'CHECKSUM_ARM64_PLACEHOLDER', $env:ARM64_HASH
-          Set-Content $script $content
-          Write-Host "Injected checksums into install script"
+          & packaging/chocolatey/render.ps1 `
+            -Version $version `
+            -Amd64Checksum $env:X64_HASH `
+            -Arm64Checksum $env:ARM64_HASH
 
       - name: Pack Chocolatey package
         shell: pwsh

@@ -2,6 +2,8 @@ module github.com/open-cli-collective/hubspot-cli
 
 go 1.23.0
 
+toolchain go1.26.10
+
 require (
 	github.com/charmbracelet/huh v0.8.0
 	github.com/fatih/color v1.18.0

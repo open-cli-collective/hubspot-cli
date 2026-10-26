@@ -1,8 +1,6 @@
 module github.com/open-cli-collective/hubspot-cli
 
-go 1.23.0
-
-toolchain go1.26.10
+go 1.27.3
 
 require (
 	github.com/charmbracelet/huh v0.8.0

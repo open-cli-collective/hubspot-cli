@@ -74,8 +74,8 @@ homebrew_casks:
     binaries: [hspt]
     hooks:
       post:
-        install: |
-          run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "hspt"], base: :staged_path
+        install_steps: |
+          run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{ .StagedPath }}/hspt"]
     caveats: |
       hubspot-cli has been installed.
 

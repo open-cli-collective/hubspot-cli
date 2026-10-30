@@ -121,7 +121,7 @@ jobs:
           echo "version=${RELEASE_TAG#v}" >> "$GITHUB_OUTPUT"
 
       - name: Submit WinGet package
-        uses: open-cli-collective/.github/actions/winget-submit@3707d5638a486251655190ca969251ccf6a12392 # open-cli-collective/.github#52
+        uses: open-cli-collective/.github/actions/winget-submit@6ee65fbc893f13b8876f013ec0661219a3e18269 # open-cli-collective/.github#52
         with:
           package-id: OpenCLICollective.hubspot-cli
           version: ${{ steps.version.outputs.version }}

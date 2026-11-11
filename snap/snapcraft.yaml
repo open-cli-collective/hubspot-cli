@@ -42,7 +42,7 @@ parts:
     plugin: go
     source: .
     build-snaps:
-      - go/1.24/stable
+      - go/1.27/stable
     build-environment:
       - CGO_ENABLED: "0"
     override-build: |
